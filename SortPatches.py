@@ -72,7 +72,7 @@ class mmdGUI():
             imsave(f_out, self.thispatch)
         self.i = self.i+1
         if self.i <= self.idxl.shape[0]-1:
-            self.thispatch = self.viewlist[self.idxl[self.i],:,:,:]
+            self.thispatch = np.copy(self.viewlist[self.idxl[self.i],:,:,:])
             
             pixmap = QPixmap.fromImage(toQImage(self.thispatch))
             self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
@@ -203,22 +203,46 @@ if __name__ == "__main__":
 #    inputdir = 
     inputfile = "data/example.jpg" #default
     outputdir = None
+    dim1 = 32 # default patch size is a 32x32 square
+    dim2 = 32
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:o:",["inputfile=","outputdir="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:o:s:",["inputfile=","outputdir=","size="])
     except getopt.GetoptError:
-        print 'python SortPatches.py -i <inputfile> -o <outputdir>'
+        print 'python SortPatches.py -i <inputfile> -o <outputdir> -s <patchheight>,<patchwidth>'
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i", "--inputfile"):
             inputfile = arg
         if opt in ("-o", "--outputdir"):
             outputdir = arg
+        if opt in ("-s", "--size"): 
+            serr = False
+            aarg = arg.split(',')
+            if len(aarg) == 2:
+                dim1 = float(aarg[0])
+                dim2 = float(aarg[1])
+                if(dim1 > 0):
+                    dim1 = int(np.ceil(dim1/8.0) * 8)
+                else:
+                    serr = True
+                if(dim2 > 0):
+                    dim2 = int(np.ceil(dim2/8.0) * 8)
+                else:
+                    serr = True
+            else:
+                serr = True
+            if serr:
+                print("Size argument (-s or --size) should be of the form m,n. Sizes must be >0 and are rounded to the nearest byte (multiple of 8).")
+                sys.exit(2)
+
+    print("Using patches of height="+str(dim1)+" and width="+str(dim2)+".")
     if not outputdir:
         outputdir = os.path.splitext(os.path.abspath(inputfile))[0]
 
     im = mpimg.imread(inputfile)
     
-    block_shape = (32, 32, im.shape[2]) #height, width
+    block_shape = (dim1, dim2, im.shape[2]) #height, width
     margin=np.mod(im.shape,block_shape)
     im_crop = im[:(im.shape-margin)[0],:(im.shape-margin)[1],:(im.shape-margin)[2]]
     
