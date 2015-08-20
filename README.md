@@ -12,7 +12,7 @@ Pretty straigforward.  The whole image is displayed, and a box cursor shows you 
 
 ##Usage##
 
-Basic invocation with default options is:
+Tested with Python 2.7. Basic invocation with default options is:
 ```
 python SortPatches.py -i <inputfile.jpg>
 ```
