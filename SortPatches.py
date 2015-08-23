@@ -22,14 +22,30 @@ def toQImage(im):
     return result
 
 
-class mmdGUI():
+class patchSorter(QMainWindow):
+    
+    def __init__(self, view, mainimage, outname):
+        super(patchSorter, self).__init__()
+        self.initUI(view,mainimage,outname)
+
+    def initUI(self, view, mainimage, outname):
+        self.gui = mmdGUI(self)
+        self.gui.setup(view, im_crop, outname)
+        self.setCentralWidget(self.gui)
+
+        self.setWindowTitle("Patch sorter")
+        self.resize(1170,1000)
+
+        self.show()
+
+class mmdGUI(QFrame):
     ### 
     # Create GUI (requires Qt4)
     ###
-
-
-    def __init__(self):
+    def __init__(self, parent):
+        super(mmdGUI,self).__init__(parent)
         self.PatchCursorColor = np.array([0,255,0])
+        
     
     # Create the button click actions 
     @pyqtSlot()
@@ -56,8 +72,10 @@ class mmdGUI():
 
     @pyqtSlot()
     def keyPressEvent(self, event):
-        QMessageBox.information(None,"Received Key Press Event!!",
-                                     "You Pressed: "+ event.text())
+        if event.text() in ['i','n']:
+            self.on_click(True)
+        if event.text() in ['b','m']:
+            self.on_click(False)
 
     def showPatchLoc(self,patchNum):
         tmpwhole = np.copy(self.wholeim)
@@ -108,21 +126,17 @@ class mmdGUI():
             os.makedirs(self.outdir_borin)
         print("Using output dirs: \n" + self.outdir_inter + "\n" + self.outdir_borin)
 
-
-
         self.idxl = np.random.permutation(range(0,self.viewlist.shape[0]))
-        self.app = QApplication(sys.argv)
-        self.w = QWidget()
-#        self.w.connect(self.keyPressEvent)
+        self.w = self
         self.w.setWindowTitle("Patch sorter")
-        self.w.resize(1170,1000)
+        self.resize(1170,1000)
 
         # Widget for showing the whole image, with location box
-        self.labelWhole = QLabel(self.w)
+        self.labelWhole = QLabel(self)
         self.labelWhole.move(10,10)
 
         # Create the label for showing the current patch number
-        self.labelPatchNum = QLabel(self.w)
+        self.labelPatchNum = QLabel(self)
         self.labelPatchNum.move(780,950)
         self.labelPatchNum.resize(110,20)
         self.labelPatchNum.setAlignment(Qt.AlignRight)
@@ -130,24 +144,23 @@ class mmdGUI():
         self.labelPatchNum.setFont(QFont("Arial",14, QFont.Bold))
 
         # Add buttons
-        btnq = QPushButton('Quit', self.w)
+        btnq = QPushButton('Quit', self)
         btnq.setToolTip('Click to quit!')
         btnq.clicked.connect(exit)
         btnq.resize(btnq.sizeHint())
         btnq.move(900, 950)   
 
-        btn = QPushButton('Interesting', self.w)
+        btn = QPushButton('Interesting', self)
         btn.setFont(QFont("Arial",18, QFont.Bold))
         btn.resize(300,100)
         btn.move(100,850)
         btn.clicked.connect(lambda: self.on_click(1))
         
-        btn = QPushButton('Boring', self.w)
+        btn = QPushButton('Boring', self)
         btn.setFont(QFont("Arial",18, QFont.Bold))
         btn.resize(300,100)
         btn.move(600,850)
         btn.clicked.connect(lambda: self.on_click(0))
-
 
         # This is the patch
         self.labelPatch = QLabel(self.w)
@@ -160,12 +173,6 @@ class mmdGUI():
         self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
         self.showPatchLoc(self.idxl[self.i])
         
-
-
-    def run(self):
-        # Show the Qt app
-        self.w.show()
-        self.app.exec_()
 
 # ----------------------------------------------------------------------------------------------------
 # Main method
@@ -218,9 +225,11 @@ if __name__ == "__main__":
     
     view = view_as_blocks(im_crop, block_shape)
 
-    gui = mmdGUI()
-    gui.setup(view, im_crop, outname=outputdir)
-    gui.run()
+    
+    # Setup and run the Qt GUI application
+    app = QApplication([])
+    gui = patchSorter(view, im_crop, outname=outputdir)
+    sys.exit(app.exec_())
     
 
 
