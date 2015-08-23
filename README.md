@@ -8,7 +8,7 @@ Randomly presents user with subregions of an image ("patches") and lets user sel
 ##Screenshot##
 <img src="doc/img/screenshot_1.png">
 
-Pretty straigforward.  The whole image is displayed, and a box cursor shows you the current patch to be sorted. The patch is represented in a scaled mini-display at the bottom. Clicking either of the large buttons sends a saved *.png image to one of the output directories, and advances to the next randomly selected patch.  The counter at the bottom right shows which patch is currently active.
+Pretty straigforward.  The whole image is displayed, and a box cursor shows you the current patch to be sorted. The patch is represented in a scaled mini-display at the bottom. Clicking either of the large buttons sends a saved *.png image to one of the output directories, and advances to the next randomly selected patch.  You can also use the the following hotkeys to sort: **i** or **n** for "Interesting" and **b** or **m** for "Boring". The counter at the bottom right shows which patch is currently active.
 
 ##Usage##
 
