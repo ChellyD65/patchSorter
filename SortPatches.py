@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, getopt, os
 from math import sqrt
 
