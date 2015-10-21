@@ -182,8 +182,8 @@ if __name__ == "__main__":
 #    inputdir = 
     inputfile = "data/example.jpg" #default
     outputdir = None
-    dim1 = 32 # default patch size is a 32x32 square
-    dim2 = 32
+    dim1 = 256 # default patch size is a 256x256 square
+    dim2 = 256
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],"hi:o:s:",["inputfile=","outputdir=","size="])
