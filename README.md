@@ -24,5 +24,5 @@ The full options are:
 python SortPatches.py -i <inputfile> -o <outputdir> -s <patchheight>,<patchwidth>
 ```
 
-This lets you specify the output directory basenames (`<outputdir>_[CLASS_1_NAME] `<outputdir>_[CLASS_2_NAME]` will be created in the same directory as the input image), and set a custom patch size (the default is 32x32).  The patch dimensions must be multiples of 8, and will be rounded up to the nearest multiple of 8 otherwise.
+This lets you specify the output directory basenames. `<basename>_[CLASS_1_NAME]` and `<basename>_[CLASS_2_NAME]` will be created in the same directory as the input image), and set a custom patch size (the default is 32x32).  The patch dimensions must be multiples of 8, and will be rounded up to the nearest multiple of 8 otherwise.
 
