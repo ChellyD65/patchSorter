@@ -31,14 +31,56 @@ class patchSorter(QMainWindow):
         self.initUI(view,mainimage,outname)
 
     def initUI(self, view, mainimage, outname):
+        self.view = view
+        self.mainimage = mainimage
+        self.outname = outname
+
         self.gui = mmdGUI(self)
-        self.gui.setup(view, im_crop, outname)
+        self.gui.setup(self.view, self.mainimage, self.outname)
         self.setCentralWidget(self.gui)
 
+
+        exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setStatusTip('Exit application')
+        exitAction.triggered.connect(qApp.quit)
+
+        setclassAction = QAction('Set Classes', self) 
+        setclassAction.setShortcut('Ctrl+N') 
+        setclassAction.setStatusTip('Set the name of the Class Buttons') 
+        setclassAction.triggered.connect(self.setClasses) 
+
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(exitAction)
+        editMenu = menubar.addMenu('&Edit')
+        editMenu.addAction(setclassAction)
+
+
         self.setWindowTitle("Patch sorter")
-        self.resize(1170,1000)
+        self.resize(1000,800)
 
         self.show()
+
+    def setClasses(self):
+        reply = QMessageBox.question(self, "QMessageBox.question()",
+                                           "This will set new classes and restart labeling, with output into new folders. Continue?",
+                                           QMessageBox.Yes | QMessageBox.No )
+        if reply == QMessageBox.Yes:
+            text, ok = QInputDialog.getText(self, 'Class Labels', 
+                                            'Enter Class Label 1:')
+            if ok:
+                newClass1 = str(text)
+                text, ok = QInputDialog.getText(self, 'Class Labels', 
+                                                'Enter Class Label 2:')
+                if ok:
+                    newClass2 = str(text)
+                    newClasses = [newClass1, newClass2]
+                    self.gui.classNames = newClasses
+                    self.gui.btn1.setText(newClasses[0])
+                    self.gui.btn2.setText(newClasses[1])
+                    self.gui.makeoutdirs()
+
 
 class mmdGUI(QFrame):
     ### 
@@ -47,12 +89,17 @@ class mmdGUI(QFrame):
     def __init__(self, parent):
         super(mmdGUI,self).__init__(parent)
         self.PatchCursorColor = np.array([0,255,0])
-        
-    
+        self.wholeImageW = 600
+        self.wholeImageH = 600
+        self.outdirsExist = False
+        self.classNames = ("Interesting", "Boring")
+
     # Create the button click actions 
     @pyqtSlot()
-    def on_click(self, interesting):
-        if interesting:
+    def on_click(self, classone):
+        if not self.outdirsExist:
+            self.makeoutdirs()
+        if classone:
             f_out = os.path.join(self.outdir_inter, "patch_"+str(self.i)+".png")
             imsave(f_out, self.thispatch)
         else:
@@ -78,6 +125,13 @@ class mmdGUI(QFrame):
             self.on_click(True)
         if event.text() in ['b','m']:
             self.on_click(False)
+
+    def onResize(self, event):
+        winWidth = event.size().width()
+        winHeight = event.size().height()
+        self.wholeImageW = int(0.8*winWidth)
+        self.wholeImageH = int(0.8*winHeight)
+        self.showPatchLoc(self.idxl[self.i])
 
     def showPatchLoc(self,patchNum):
         tmpwhole = np.copy(self.wholeim)
@@ -109,9 +163,18 @@ class mmdGUI(QFrame):
         skimage.draw.set_color(tmpwhole,(rr,cc),self.PatchCursorColor)
 
         pixmapWhole = QPixmap.fromImage(toQImage(tmpwhole))
-        self.labelWhole.setPixmap(pixmapWhole.scaled(1200, 800, Qt.KeepAspectRatio,Qt.SmoothTransformation))
-        
+        self.labelWhole.setPixmap(pixmapWhole.scaled(self.wholeImageW, self.wholeImageH, Qt.KeepAspectRatio,Qt.SmoothTransformation))
 
+    def makeoutdirs(self):
+        # Make the output directory
+        self.outdir_inter = self.outname + "_" + "".join(x for x in self.classNames[0] if x.isalnum())
+        self.outdir_borin = self.outname + "_" + "".join(x for x in self.classNames[1] if x.isalnum())
+        if not os.path.exists(self.outdir_inter):
+            os.makedirs(self.outdir_inter)
+        if not os.path.exists(self.outdir_borin):
+            os.makedirs(self.outdir_borin)
+        print("Using output dirs: \n" + self.outdir_inter + "\n" + self.outdir_borin)
+        self.outdirsExist = True
 
     def setup(self, view, wholeim, outname='patches_Output'):
         self.view = view
@@ -119,62 +182,77 @@ class mmdGUI(QFrame):
         self.viewlist = view.reshape(view.shape[0]*view.shape[1]*view.shape[2],view.shape[3],view.shape[4],view.shape[5])
         self.outname = outname
 
-        # Make the output directory
-        self.outdir_inter = self.outname + "_interesting"
-        self.outdir_borin = self.outname + "_boring"
-        if not os.path.exists(self.outdir_inter):
-            os.makedirs(self.outdir_inter)
-        if not os.path.exists(self.outdir_borin):
-            os.makedirs(self.outdir_borin)
-        print("Using output dirs: \n" + self.outdir_inter + "\n" + self.outdir_borin)
-
         self.idxl = np.random.permutation(range(0,self.viewlist.shape[0]))
         self.w = self
         self.w.setWindowTitle("Patch sorter")
+        self.resizeEvent = self.onResize
         self.resize(1170,1000)
 
         # Widget for showing the whole image, with location box
         self.labelWhole = QLabel(self)
-        self.labelWhole.move(10,10)
+#        self.labelWhole.move(10,10)
 
         # Create the label for showing the current patch number
         self.labelPatchNum = QLabel(self)
-        self.labelPatchNum.move(780,950)
+#        self.labelPatchNum.move(780,950)
         self.labelPatchNum.resize(110,20)
         self.labelPatchNum.setAlignment(Qt.AlignRight)
         self.labelPatchNum.setText("1/"+str(self.viewlist.shape[0]))
         self.labelPatchNum.setFont(QFont("Arial",14, QFont.Bold))
 
+
         # Add buttons
-        btnq = QPushButton('Quit', self)
-        btnq.setToolTip('Click to quit!')
-        btnq.clicked.connect(exit)
-        btnq.resize(btnq.sizeHint())
-        btnq.move(900, 950)   
+        if not isinstance(self.parent(), QMainWindow):
+            btnq = QPushButton('Quit', self)
+            btnq.setToolTip('Click to quit!')
+            btnq.clicked.connect(exit)
+            btnq.resize(btnq.sizeHint())
 
-        btn = QPushButton('Interesting', self)
-        btn.setFont(QFont("Arial",18, QFont.Bold))
-        btn.resize(300,100)
-        btn.move(100,850)
-        btn.clicked.connect(lambda: self.on_click(1))
+        self.btn1 = QPushButton(self.classNames[0], self)
+        self.btn1.setFont(QFont("Arial",18, QFont.Bold))
+        self.btn1.resize(300,100)
+        self.btn1.clicked.connect(lambda: self.on_click(1))
         
-        btn = QPushButton('Boring', self)
-        btn.setFont(QFont("Arial",18, QFont.Bold))
-        btn.resize(300,100)
-        btn.move(600,850)
-        btn.clicked.connect(lambda: self.on_click(0))
+        self.btn2 = QPushButton(self.classNames[1], self)
+        self.btn2.setFont(QFont("Arial",18, QFont.Bold))
+        self.btn2.resize(300,100)
+        self.btn2.clicked.connect(lambda: self.on_click(0))
 
-        # This is the patch
+        # This is the current patch
         self.labelPatch = QLabel(self.w)
-        self.labelPatch.move(450,850)
-        
-        # Display the current whole image
+
+        # Display area for the current whole image
         self.i = 0
         self.thispatch = self.viewlist[self.idxl[self.i],:,:,:]
         pixmap = QPixmap.fromImage(toQImage(self.thispatch))
         self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
         self.showPatchLoc(self.idxl[self.i])
-        
+
+        # Set up the layout of the GUI
+        top_area = QHBoxLayout()
+        top_area.addStretch(1)
+        top_area.addWidget(self.labelWhole)
+        top_area.addStretch(1)
+        middle_area = QHBoxLayout()
+        middle_area.addStretch(1)
+        if isinstance(self.parent(), QMainWindow):
+            self.parent().statusBar().insertWidget(1,self.labelPatchNum)
+        else:
+            middle_area.addWidget(self.labelPatchNum)
+        bottom_area = QHBoxLayout()
+        bottom_area.addStretch(1)
+        bottom_area.addWidget(self.btn1)
+        bottom_area.addWidget(self.labelPatch)
+        bottom_area.addWidget(self.btn2)
+        bottom_area.addStretch(1)
+        if not isinstance(self.parent(), QMainWindow):
+            bottom_area.addWidget(btnq)
+        vbox = QVBoxLayout()
+        vbox.addLayout(top_area)
+        vbox.addLayout(middle_area)
+        vbox.addLayout(bottom_area)
+        self.setLayout(vbox)
+
 
 # ----------------------------------------------------------------------------------------------------
 # Main method
@@ -182,8 +260,8 @@ if __name__ == "__main__":
 #    inputdir = 
     inputfile = "data/example.jpg" #default
     outputdir = None
-    dim1 = 256 # default patch size is a 256x256 square
-    dim2 = 256
+    dim1 = 32 # default patch size is a 32x32 square
+    dim2 = 32
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],"hi:o:s:",["inputfile=","outputdir=","size="])

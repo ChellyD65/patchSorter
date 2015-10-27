@@ -1,3 +1,5 @@
 # Ignore all emacs backup files
 *~
 data/*/*
+backup
+backup/*
