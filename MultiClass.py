@@ -120,9 +120,20 @@ class ListEdit(QDialog):
 
 class patchSorter(QMainWindow):
     
-    def __init__(self, view, mainimage, outname):
+    def __init__(self, inputfile, dims, outname):
         super(patchSorter, self).__init__()
-        self.initUI(view,mainimage,outname)
+        self.inputfile = inputfile
+        self.setupPatches(dims)
+        self.initUI(self.view,self.im,outname)
+
+    def setupPatches(self, dims):
+        self.dims = dims
+        self.im = mpimg.imread(self.inputfile)
+        self.block_shape = (self.dims[0], self.dims[1], self.im.shape[2]) #height, width
+        margin=np.mod(self.im.shape,self.block_shape)
+        self.im_crop = self.im[:(self.im.shape-margin)[0],:(self.im.shape-margin)[1],:(self.im.shape-margin)[2]]
+        self.view = view_as_blocks(self.im_crop, self.block_shape)
+
 
     def initUI(self, view, mainimage, outname):
         self.view = view
@@ -130,7 +141,8 @@ class patchSorter(QMainWindow):
         self.outname = outname
 
         self.gui = mmdGUI(self)
-        self.gui.setup(self.view, self.mainimage, self.outname)
+        self.gui.setupImages(self.view, self.mainimage, self.outname)
+        self.gui.setupInterface()
         self.setCentralWidget(self.gui)
 
 
@@ -140,15 +152,21 @@ class patchSorter(QMainWindow):
         exitAction.triggered.connect(qApp.quit)
 
         setclassAction = QAction('Set Classes', self) 
-        setclassAction.setShortcut('Ctrl+N') 
+        setclassAction.setShortcut('Ctrl+C') 
         setclassAction.setStatusTip('Set the name of the Class Buttons') 
         setclassAction.triggered.connect(self.setClasses) 
+
+        setpatchsizeAction = QAction('Set Patch Size', self) 
+        setpatchsizeAction.setShortcut('Ctrl+P') 
+        setpatchsizeAction.setStatusTip('Set the edge size of the square patches') 
+        setpatchsizeAction.triggered.connect(self.setPatchSize) 
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(exitAction)
         editMenu = menubar.addMenu('&Edit')
         editMenu.addAction(setclassAction)
+        editMenu.addAction(setpatchsizeAction)
 
 
         self.setWindowTitle("Patch sorter")
@@ -157,7 +175,7 @@ class patchSorter(QMainWindow):
         self.show()
 
     def setClasses(self):
-        reply = QMessageBox.question(self, "QMessageBox.question()",
+        reply = QMessageBox.question(self, "Set the class names?",
                                            "This will set new classes and restart labeling, with output into new folders. Continue?",
                                            QMessageBox.Yes | QMessageBox.No )
         if reply == QMessageBox.Yes:
@@ -170,7 +188,28 @@ class patchSorter(QMainWindow):
             else:
                 return 0
                 
-                
+    def setPatchSize(self):
+        reply = QMessageBox.question(self, "Set the patch size?",
+                                           "This will set new edge lengths for the patched and restart labeling, with output into new folders. Continue?",
+                                           QMessageBox.Yes | QMessageBox.No )
+        if reply == QMessageBox.Yes:
+            text, ok = QInputDialog.getText(self, 'Patch Edge Length', 
+                                            'Enter the Patch Edge Length in Pixels (it will be rounded to nearest multiple of 8):')
+            if ok:
+                if str(text).isdigit():
+                    newPatchSize = int(str(text))
+                    newPatchSize = int(np.ceil(newPatchSize/8.0) * 8) # must be multiple of 8
+                    dims = [newPatchSize, newPatchSize]
+                    self.setupPatches(dims)
+                    self.gui.setupImages(self.view, self.im, self.outname)
+                    self.gui.i = 0
+                    self.gui.showPatchLoc(self.gui.idxl[self.gui.i])
+                    self.gui.labelPatchNum.setText("("+str(self.gui.i+1)+"/"+str(self.gui.viewlist.shape[0])+")")
+                    self.gui.patchsizeStatus.setText("Patch size: "+str(self.view.shape[3])+"x"+str(self.view.shape[4]))
+
+                else:
+                    reply = QMessageBox.warning(self,"Invalid patch edge length","Value must be an integer.")
+
 
 class mmdGUI(QFrame):
     ### 
@@ -226,27 +265,27 @@ class mmdGUI(QFrame):
         m,n = np.unravel_index(patchNum,(self.view.shape[0],self.view.shape[1]))
         
         # Coordinates for rectangle
-        rr1,cc1   = skimage.draw.line(m*view.shape[3],n*view.shape[4],m*view.shape[3],(n+1)*view.shape[4]-1)
-        rr11,cc11 = skimage.draw.line(m*view.shape[3]+1,n*view.shape[4],m*view.shape[3]+1,(n+1)*view.shape[4]-1)
-        rr12,cc12 = skimage.draw.line(m*view.shape[3]+2,n*view.shape[4],m*view.shape[3]+2,(n+1)*view.shape[4]-1)
+        rr1,cc1   = skimage.draw.line(m*self.view.shape[3],n*self.view.shape[4],m*self.view.shape[3],(n+1)*self.view.shape[4]-1)
+        rr11,cc11 = skimage.draw.line(m*self.view.shape[3]+1,n*self.view.shape[4],m*self.view.shape[3]+1,(n+1)*self.view.shape[4]-1)
+        rr12,cc12 = skimage.draw.line(m*self.view.shape[3]+2,n*self.view.shape[4],m*self.view.shape[3]+2,(n+1)*self.view.shape[4]-1)
         rr = np.concatenate((rr1,rr11,rr12)); cc = np.concatenate((cc1,cc11,cc12))
         skimage.draw.set_color(tmpwhole,(rr,cc),self.PatchCursorColor)
 
-        rr2,cc2   = skimage.draw.line(m*view.shape[3],n*view.shape[4],(m+1)*view.shape[3]-1,n*view.shape[4])
-        rr21,cc21 = skimage.draw.line(m*view.shape[3],n*view.shape[4]+1,(m+1)*view.shape[3]-1,n*view.shape[4]+1)
-        rr22,cc22 = skimage.draw.line(m*view.shape[3],n*view.shape[4]+2,(m+1)*view.shape[3]-1,n*view.shape[4]+2)
+        rr2,cc2   = skimage.draw.line(m*self.view.shape[3],n*self.view.shape[4],(m+1)*self.view.shape[3]-1,n*self.view.shape[4])
+        rr21,cc21 = skimage.draw.line(m*self.view.shape[3],n*self.view.shape[4]+1,(m+1)*self.view.shape[3]-1,n*self.view.shape[4]+1)
+        rr22,cc22 = skimage.draw.line(m*self.view.shape[3],n*self.view.shape[4]+2,(m+1)*self.view.shape[3]-1,n*self.view.shape[4]+2)
         rr = np.concatenate((rr2,rr21,rr22)); cc = np.concatenate((cc2,cc21,cc22))
         skimage.draw.set_color(tmpwhole,(rr,cc),self.PatchCursorColor)
 
-        rr3,cc3   = skimage.draw.line((m+1)*view.shape[3]-1,(n+1)*view.shape[4]-1,m*view.shape[3],(n+1)*view.shape[4]-1)
-        rr31,cc31 = skimage.draw.line((m+1)*view.shape[3]-1,(n+1)*view.shape[4]-2,m*view.shape[3],(n+1)*view.shape[4]-2)
-        rr32,cc32 = skimage.draw.line((m+1)*view.shape[3]-1,(n+1)*view.shape[4]-3,m*view.shape[3],(n+1)*view.shape[4]-3)
+        rr3,cc3   = skimage.draw.line((m+1)*self.view.shape[3]-1,(n+1)*self.view.shape[4]-1,m*self.view.shape[3],(n+1)*self.view.shape[4]-1)
+        rr31,cc31 = skimage.draw.line((m+1)*self.view.shape[3]-1,(n+1)*self.view.shape[4]-2,m*self.view.shape[3],(n+1)*self.view.shape[4]-2)
+        rr32,cc32 = skimage.draw.line((m+1)*self.view.shape[3]-1,(n+1)*self.view.shape[4]-3,m*self.view.shape[3],(n+1)*self.view.shape[4]-3)
         rr = np.concatenate((rr3,rr31,rr32)); cc = np.concatenate((cc3,cc31,cc32))
         skimage.draw.set_color(tmpwhole,(rr,cc),self.PatchCursorColor)
 
-        rr4,cc4   = skimage.draw.line((m+1)*view.shape[3]-1,(n+1)*view.shape[4]-1,(m+1)*view.shape[3]-1,n*view.shape[4])
-        rr41,cc41 = skimage.draw.line((m+1)*view.shape[3]-2,(n+1)*view.shape[4]-1,(m+1)*view.shape[3]-2,n*view.shape[4])
-        rr42,cc42 = skimage.draw.line((m+1)*view.shape[3]-3,(n+1)*view.shape[4]-1,(m+1)*view.shape[3]-3,n*view.shape[4])
+        rr4,cc4   = skimage.draw.line((m+1)*self.view.shape[3]-1,(n+1)*self.view.shape[4]-1,(m+1)*self.view.shape[3]-1,n*self.view.shape[4])
+        rr41,cc41 = skimage.draw.line((m+1)*self.view.shape[3]-2,(n+1)*self.view.shape[4]-1,(m+1)*self.view.shape[3]-2,n*self.view.shape[4])
+        rr42,cc42 = skimage.draw.line((m+1)*self.view.shape[3]-3,(n+1)*self.view.shape[4]-1,(m+1)*self.view.shape[3]-3,n*self.view.shape[4])
         rr = np.concatenate((rr4,rr41,rr42)); cc = np.concatenate((cc4,cc41,cc42))
         skimage.draw.set_color(tmpwhole,(rr,cc),self.PatchCursorColor)
 
@@ -289,13 +328,14 @@ class mmdGUI(QFrame):
         print("Using output dirs:" + "\n".join(self.outDirs))
         self.outdirsExist = True
 
-    def setup(self, view, wholeim, outname='patches_Output'):
+    def setupImages(self, view, wholeim, outname='patches_Output'):
         self.view = view
         self.wholeim = wholeim
         self.viewlist = view.reshape(view.shape[0]*view.shape[1]*view.shape[2],view.shape[3],view.shape[4],view.shape[5])
         self.outname = outname
-
         self.idxl = np.random.permutation(range(0,self.viewlist.shape[0]))
+
+    def setupInterface(self):
         self.w = self
         self.w.setWindowTitle("Patch sorter")
         self.resizeEvent = self.onResize
@@ -312,7 +352,7 @@ class mmdGUI(QFrame):
         self.labelPatchNum = QLabel(self)
         self.labelPatchNum.resize(110,20)
         self.labelPatchNum.setAlignment(Qt.AlignRight)
-        self.labelPatchNum.setText("1/"+str(self.viewlist.shape[0]))
+        self.labelPatchNum.setText("(1/"+str(self.viewlist.shape[0])+")")
         self.labelPatchNum.setFont(QFont("Arial",14, QFont.Bold))
 
         self.lastpickPatch = QLabel(self)
@@ -320,6 +360,13 @@ class mmdGUI(QFrame):
         self.lastpickPatch.setAlignment(Qt.AlignRight)
         self.lastpickPatch.setText("Last: ")
         self.lastpickPatch.setFont(QFont("Arial",14, QFont.Bold))
+
+        self.patchsizeStatus = QLabel(self)
+        self.patchsizeStatus.resize(110,20)
+        self.patchsizeStatus.setAlignment(Qt.AlignRight)
+        self.patchsizeStatus.setText("Patch size: "+str(self.view.shape[3])+"x"+str(self.view.shape[4]))
+        self.patchsizeStatus.setFont(QFont("Arial",14, QFont.Bold))
+
 
 
         # Display area for the current whole image
@@ -353,6 +400,7 @@ class mmdGUI(QFrame):
         middle_area.addStretch(1)
         if isinstance(self.parent(), QMainWindow):
             self.parent().statusBar().insertWidget(0,self.labelPatchNum)
+            self.parent().statusBar().insertWidget(0,self.patchsizeStatus)
             self.parent().statusBar().insertPermanentWidget(1,self.lastpickPatch, stretch=200)
         else:
             middle_area.addWidget(self.labelPatchNum)
@@ -412,22 +460,11 @@ if __name__ == "__main__":
                 print("Size argument (-s or --size) should be of the form m,n. Sizes must be >0 and are rounded to the nearest byte (multiple of 8).")
                 sys.exit(2)
 
-    print("Using patches of height="+str(dim1)+" and width="+str(dim2)+".")
     if not outputdir:
         outputdir = os.path.splitext(os.path.abspath(inputfile))[0]
 
-    im = mpimg.imread(inputfile)
-    
-    block_shape = (dim1, dim2, im.shape[2]) #height, width
-    margin=np.mod(im.shape,block_shape)
-    im_crop = im[:(im.shape-margin)[0],:(im.shape-margin)[1],:(im.shape-margin)[2]]
-    
-    view = view_as_blocks(im_crop, block_shape)
-
-    
-    # Setup and run the Qt GUI application
     app = QApplication([])
-    p = patchSorter(view, im_crop, outname=outputdir)
+    p = patchSorter(inputfile, [dim1, dim2], outname=outputdir)
     if classfile:
         with open(classfile) as f:
             lines = f.read().splitlines()
