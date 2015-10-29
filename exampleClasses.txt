@@ -1,0 +1,4 @@
+Epithelium
+Stroma
+Debris
+Empty
