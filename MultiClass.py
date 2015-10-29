@@ -55,6 +55,13 @@ class ListEdit(QDialog):
         self.clearButton = QtGui.QPushButton(self.centralwidget)
         self.clearButton.setObjectName("clearButton")
         self.clearButton.setText("Clear")
+        
+
+        self.loadButton = QtGui.QPushButton(self.centralwidget)
+        self.loadButton.setObjectName("clearButton")
+        self.loadButton.setText("Load File")
+        self.verticalLayout_2.addWidget(self.loadButton)
+
         self.verticalLayout_2.addWidget(self.clearButton)
         spacerItem = QtGui.QSpacerItem(20,40,QtGui.QSizePolicy.Minimum,QtGui.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
@@ -73,6 +80,7 @@ class ListEdit(QDialog):
         self.connect(self.addButton, QtCore.SIGNAL("clicked()"), self.addToList)
         self.connect(self.removeButton, QtCore.SIGNAL("clicked()"), self.removeFromList)
         self.connect(self.clearButton, QtCore.SIGNAL("clicked()"), self.clearList)
+        self.connect(self.loadButton, QtCore.SIGNAL("clicked()"), self.loadListFile)
         self.connect(self.okButton, QtCore.SIGNAL("clicked()"), self.ListUpdate)
         self.connect(self.cancelButton, QtCore.SIGNAL("clicked()"), self.cancelListUpdate)
 
@@ -99,6 +107,16 @@ class ListEdit(QDialog):
     def setList(self, listEntries):
         for i in listEntries:
             self.listBox.addItem(i) 
+
+    def loadListFile(self):
+        classfile = QFileDialog.getOpenFileName(self, 'Open file', os.path.curdir)
+        if classfile:
+            self.clearList()
+            with open(classfile) as f:
+                lines = f.read().splitlines()
+            self.setList(lines)
+
+
 
 class patchSorter(QMainWindow):
     
@@ -180,6 +198,7 @@ class mmdGUI(QFrame):
                 pixmap = QPixmap.fromImage(toQImage(self.thispatch))
                 self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
                 self.labelPatchNum.setText(str(self.i+1)+"/"+str(self.viewlist.shape[0]))
+                self.lastpickPatch.setText("Last: " + classname)
                 self.showPatchLoc(self.idxl[self.i])
             else:
                 msgBox = QMessageBox()
@@ -190,10 +209,10 @@ class mmdGUI(QFrame):
 
     @pyqtSlot()
     def keyPressEvent(self, event):
-        if event.text() in ['i','n']:
-            self.on_click(True)
-        if event.text() in ['b','m']:
-            self.on_click(False)
+        if str(event.text()).isdigit():
+            ind = int(str(event.text())) - 1
+            if ind < len(self.classNames):
+                self.on_click(self.classNames[ind])()
 
     def onResize(self, event):
         winWidth = event.size().width()
@@ -256,8 +275,9 @@ class mmdGUI(QFrame):
         if not isinstance(self.parent(), QMainWindow):
             self.bottom_area.addWidget(btnq)
         self.vbox.addLayout(self.bottom_area)
-
-    
+        self.i = 0
+   
+        self.outdirsExist = False
 
     def makeoutdirs(self):
         # Make the output directory
@@ -286,6 +306,7 @@ class mmdGUI(QFrame):
 
         # Widget for showing the current patch
         self.labelPatch = QLabel(self.w)
+        self.labelPatch.setFrameStyle(QFrame.Panel)
 
         # Create the label for showing the current patch number
         self.labelPatchNum = QLabel(self)
@@ -293,6 +314,13 @@ class mmdGUI(QFrame):
         self.labelPatchNum.setAlignment(Qt.AlignRight)
         self.labelPatchNum.setText("1/"+str(self.viewlist.shape[0]))
         self.labelPatchNum.setFont(QFont("Arial",14, QFont.Bold))
+
+        self.lastpickPatch = QLabel(self)
+        self.lastpickPatch.resize(110,20)
+        self.lastpickPatch.setAlignment(Qt.AlignRight)
+        self.lastpickPatch.setText("Last: ")
+        self.lastpickPatch.setFont(QFont("Arial",14, QFont.Bold))
+
 
         # Display area for the current whole image
         self.i = 0
@@ -325,6 +353,7 @@ class mmdGUI(QFrame):
         middle_area.addStretch(1)
         if isinstance(self.parent(), QMainWindow):
             self.parent().statusBar().insertWidget(0,self.labelPatchNum)
+            self.parent().statusBar().insertPermanentWidget(1,self.lastpickPatch, stretch=200)
         else:
             middle_area.addWidget(self.labelPatchNum)
         self.bottom_area = QHBoxLayout()
@@ -398,7 +427,12 @@ if __name__ == "__main__":
     
     # Setup and run the Qt GUI application
     app = QApplication([])
-    gui = patchSorter(view, im_crop, outname=outputdir)
+    p = patchSorter(view, im_crop, outname=outputdir)
+    if classfile:
+        with open(classfile) as f:
+            lines = f.read().splitlines()
+        p.gui.classNames = lines
+        p.gui.updateClasses()
     sys.exit(app.exec_())
     
 
