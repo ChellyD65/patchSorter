@@ -325,7 +325,7 @@ class mmdGUI(QFrame):
             self.outDirs.append(self.outname + "_" + "".join(x for x in cname if x.isalnum()))
             if not os.path.exists(self.outDirs[-1]):
                 os.makedirs(self.outDirs[-1])
-        print("Using output dirs:" + "\n".join(self.outDirs))
+        print("Using output dirs:\n" + "\n".join(self.outDirs))
         self.outdirsExist = True
 
     def setupImages(self, view, wholeim, outname='patches_Output'):
