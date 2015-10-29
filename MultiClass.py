@@ -236,7 +236,7 @@ class mmdGUI(QFrame):
                 self.thispatch = np.copy(self.viewlist[self.idxl[self.i],:,:,:])
                 pixmap = QPixmap.fromImage(toQImage(self.thispatch))
                 self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
-                self.labelPatchNum.setText(str(self.i+1)+"/"+str(self.viewlist.shape[0]))
+                self.labelPatchNum.setText("("+str(self.i+1)+"/"+str(self.viewlist.shape[0])+")")
                 self.lastpickPatch.setText("Last: " + classname)
                 self.showPatchLoc(self.idxl[self.i])
             else:
