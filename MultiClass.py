@@ -146,6 +146,11 @@ class patchSorter(QMainWindow):
         self.setCentralWidget(self.gui)
 
 
+        openAction = QAction('Open', self)
+        openAction.setShortcut('Ctrl+O')
+        openAction.setStatusTip('Open an image file')
+        openAction.triggered.connect(self.fileOpen)
+
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)        
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit application')
@@ -163,6 +168,7 @@ class patchSorter(QMainWindow):
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(openAction)
         fileMenu.addAction(exitAction)
         editMenu = menubar.addMenu('&Edit')
         editMenu.addAction(setclassAction)
@@ -173,6 +179,28 @@ class patchSorter(QMainWindow):
         self.resize(1000,800)
 
         self.show()
+
+
+    def fileOpen(self):
+        reply = QMessageBox.question(self, "Open a new main image file?",
+                                           "This will restart labeling. Continue?",
+                                           QMessageBox.Yes | QMessageBox.No )
+        if reply == QMessageBox.Yes:
+            newImageFile = QFileDialog.getOpenFileName(self, 'Open file', os.path.curdir)
+            if newImageFile:
+                self.inputfile = str(newImageFile)
+                self.setupPatches(self.dims)
+                self.gui.setupImages(self.view, self.im, self.outname)
+                self.gui.labelPatchNum.setText("("+str(self.gui.i+1)+"/"+str(self.gui.viewlist.shape[0])+")")
+                self.gui.patchsizeStatus.setText("Patch size: "+str(self.view.shape[3])+"x"+str(self.view.shape[4]))
+                self.gui.outname = os.path.splitext(os.path.abspath(self.inputfile))[0]
+                self.gui.updateClasses()
+                self.gui.i = 0
+                self.gui.thispatch = np.copy(self.gui.viewlist[self.gui.idxl[self.gui.i],:,:,:])
+                pixmap = QPixmap.fromImage(toQImage(self.gui.thispatch))
+                self.gui.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
+                self.gui.labelPatchNum.setText("("+str(self.gui.i+1)+"/"+str(self.gui.viewlist.shape[0])+")")
+                self.gui.showPatchLoc(self.gui.idxl[self.gui.i])
 
     def setClasses(self):
         reply = QMessageBox.question(self, "Set the class names?",
@@ -425,8 +453,8 @@ if __name__ == "__main__":
     inputfile = "data/example.jpg" #default
     outputdir = None
     classfile = None
-    dim1 = 32 # default patch size is a 32x32 square
-    dim2 = 32
+    dim1 = 256 # default patch size is a 256x256 square
+    dim2 = 256
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],"hi:o:c:s:",["inputfile=","outputdir=","classfile=","size="])
