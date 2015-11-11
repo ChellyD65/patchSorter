@@ -326,8 +326,9 @@ class mmdGUI(QFrame):
         self.bottom_area.setParent(None)
                     
         self.buttonList = []
+        buttoni = 1
         for cname in self.classNames:
-            this_button = QPushButton(cname, self)
+            this_button = QPushButton(cname+" ("+str(buttoni)+")", self)
             this_button.setFont(QFont("Arial",18, QFont.Bold))
             this_button.resize(300,100)
             this_button.clicked.connect(self.on_click(cname))
