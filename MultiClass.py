@@ -333,6 +333,7 @@ class mmdGUI(QFrame):
             this_button.resize(300,100)
             this_button.clicked.connect(self.on_click(cname))
             self.buttonList.append(this_button)
+            buttoni = buttoni+1
 
         self.bottom_area = QHBoxLayout()
         self.bottom_area.addStretch(1)
