@@ -143,6 +143,7 @@ class patchSorter(QMainWindow):
         self.gui = mmdGUI(self)
         self.gui.setupImages(self.view, self.mainimage, self.outname)
         self.gui.setupInterface()
+        self.gui.unrandomize()
         self.setCentralWidget(self.gui)
 
 
@@ -269,12 +270,8 @@ class mmdGUI(QFrame):
             imsave(f_out, self.thispatch)
             self.i = self.i+1
             if self.i <= self.idxl.shape[0]-1:
-                self.thispatch = np.copy(self.viewlist[self.idxl[self.i],:,:,:])
-                pixmap = QPixmap.fromImage(toQImage(self.thispatch))
-                self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
-                self.labelPatchNum.setText("("+str(self.i+1)+"/"+str(self.viewlist.shape[0])+")")
+                self.showCurrentPatch()
                 self.lastpickPatch.setText("Last: " + classname)
-                self.showPatchLoc(self.idxl[self.i])
             else:
                 msgBox = QMessageBox()
                 msgBox.setText("All patches have been classified. You're Done!")
@@ -373,11 +370,20 @@ class mmdGUI(QFrame):
         self.outname = outname
         self.idxl = np.random.permutation(range(0,self.viewlist.shape[0]))
 
+    def showCurrentPatch(self):
+        self.thispatch = np.copy(self.viewlist[self.idxl[self.i],:,:,:])
+        pixmap = QPixmap.fromImage(toQImage(self.thispatch))
+        self.labelPatch.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio,Qt.SmoothTransformation))
+        self.labelPatchNum.setText("("+str(self.i+1)+"/"+str(self.viewlist.shape[0])+")")
+        self.showPatchLoc(self.idxl[self.i])
+
     def unrandomize(self):
         self.idxl = np.concatenate([self.idxl[0:self.i],np.sort(self.idxl[self.i:])])
+        self.showCurrentPatch()
     
     def randomize(self):
         self.idxl = np.concatenate([self.idxl[0:self.i],np.random.permutation(self.idxl[self.i:])])
+        self.showCurrentPatch()
 
     def setupInterface(self):
         self.w = self
