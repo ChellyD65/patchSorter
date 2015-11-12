@@ -24,8 +24,8 @@ The full options are:
 python SortPatches.py -i <inputfile> -o <outputdir> -s <patchheight>,<patchwidth> -c <class name listing file>
 ```
 
-This lets you specify the output directory basenames. `<basename>_[CLASS_1_NAME]` and `<basename>_[CLASS_2_NAME]` will be created in the output dir. You can also set a custom patch size (the default is 32x32) with the `-s` option.  The patch dimensions must be multiples of 8, and will be rounded up to the nearest multiple of 8 otherwise.
+This allows setting of custom patch size (the default is 32x32) with the `-s` option.  The patch dimensions must be multiples of 8, and will be rounded up to the nearest multiple of 8 otherwise. You can also set patch size within the program with the `Edit|Set Patch Size` menu option.
 
-The classnames can be specified in a text file, with one class name per line (as in `exampleClasses.txt`).  Each name will get its own button, and its own output directory. You can load a file from the command line or within the `Set Class Names` dialog.
+The classnames can be specified in a text file, with one class name per line (as in `exampleClasses.txt`).  Each name will get its own button, and its own output directory. You can load a file from the command line or within the `Edit|Set Class Names` dialog.
 
 Input image files can be passed via the command line, or from the `File|Open` menu option.
