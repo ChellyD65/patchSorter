@@ -166,6 +166,11 @@ class patchSorter(QMainWindow):
         setpatchsizeAction.setStatusTip('Set the edge size of the square patches') 
         setpatchsizeAction.triggered.connect(self.setPatchSize) 
 
+        randomizeAction = QAction('Randomize Order', self)
+        randomizeAction.triggered.connect(self.gui.randomize)
+        unrandomizeAction = QAction('Unrandomize Order', self)
+        unrandomizeAction.triggered.connect(self.gui.unrandomize)
+
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(openAction)
@@ -173,7 +178,10 @@ class patchSorter(QMainWindow):
         editMenu = menubar.addMenu('&Edit')
         editMenu.addAction(setclassAction)
         editMenu.addAction(setpatchsizeAction)
-
+        optionMenu = menubar.addMenu('&Options')
+        optionMenu.addAction(randomizeAction)
+        optionMenu.addAction(unrandomizeAction)
+        
 
         self.setWindowTitle("Patch sorter")
         self.resize(1000,800)
@@ -364,6 +372,12 @@ class mmdGUI(QFrame):
         self.viewlist = view.reshape(view.shape[0]*view.shape[1]*view.shape[2],view.shape[3],view.shape[4],view.shape[5])
         self.outname = outname
         self.idxl = np.random.permutation(range(0,self.viewlist.shape[0]))
+
+    def unrandomize(self):
+        self.idxl = np.concatenate([self.idxl[0:self.i],np.sort(self.idxl[self.i:])])
+    
+    def randomize(self):
+        self.idxl = np.concatenate([self.idxl[0:self.i],np.random.permutation(self.idxl[self.i:])])
 
     def setupInterface(self):
         self.w = self
